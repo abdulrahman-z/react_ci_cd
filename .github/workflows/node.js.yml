@@ -1,16 +1,16 @@
 name: Node.js CI/CD
 
-on:
+on: 
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v5
 
       - name: Setup Node.js
@@ -22,58 +22,32 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Run tests
+      - name: Test
         run: npm test
-
-      - name: Build
-        run: npm run build
-
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: dist
-          path: dist
-
+        
   deploy:
     name: Deploy to Vercel
-    needs: build
+    needs: test
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v5
-
-      - name: Download build artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: dist
-          path: dist
 
       - name: Install Vercel CLI
         run: npm i -g vercel
-
-      - name: Link Vercel project
+        
+      - name: Vercel Environment
         run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
-      - name: Prepare prebuilt output
-        run: |
-          mkdir -p .vercel/output/static
-          cp -r dist/* .vercel/output/static/
-          cat <<EOF > .vercel/output/config.json
-          {
-            "version": 3,
-            "routes": [
-              { "handle": "filesystem" },
-              { "src": "/(.*)", "dest": "/index.html" }
-            ]
-          }
-          EOF
+      - name: Vercel build
+        run: vercel build --prod --token=${{  secrets.VERCEL_TOKEN }} 
 
-      - name: Deploy prebuilt output
-        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }} --yes
+      - name: Vercel deploy
+        run: vercel deploy --prebuilt --prod --token=${{  secrets.VERCEL_TOKEN }} --yes
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}        
