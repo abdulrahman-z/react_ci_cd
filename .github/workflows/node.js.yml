@@ -7,7 +7,7 @@ on:
   pull_request:
     branches: [ "main" ]
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     steps:
 
@@ -25,34 +25,25 @@ jobs:
 
       - name: Run tests
         run: npm test
-
-      - name: Build
-        run: npm run build
-
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: dist
-          path: dist
-
+        
   deploy:
     name: Deploy to Vercel
-    needs: build
+    needs: test
     runs-on: ubuntu-latest
-    # Skip deploy on PRs - only deploy when merged/pushed to main
     if: github.event_name == 'push'
     steps:
-      - name: Download build artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: dist
-          path: dist
-
+      - uses: actions/checkout@v5
       - name: Install Vercel CLI
         run: npm i -g vercel
-
-      - name: Deploy to Vercel
-        run: vercel deploy dist --prod --token=${{ secrets.VERCEL_TOKEN }} --yes
+      - name: Pull Vercel environment
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      - name: Build with Vercel
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Deploy prebuilt
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }} --yes
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
