@@ -7,6 +7,7 @@ import NotFound from './pages/NotFound';
 export default function App() {
   return (
     <div>
+      <h1>Expenses ---- 2026</h1>
       <Navbar />
       <Routes>
         <Route path="/" element={<Dashboard />} />
