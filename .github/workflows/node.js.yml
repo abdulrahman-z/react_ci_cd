@@ -1,50 +1,58 @@
 # This workflow will do a clean installation of node dependencies, cache/restore them, build the source code and run tests across different versions of node
 # For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-nodejs
-
 name: Node.js CI
-
 on:
   push:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
-
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
     steps:
-    
+
       - name: Checkout code
         uses: actions/checkout@v5
-        
+
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
           node-version: 20
           cache: 'npm'
-          
+
       - name: Install dependencies
         run: npm install
-  
+
       - name: Run tests
         run: npm test
-      
+
       - name: Build
         run: npm run build
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
 
   deploy:
     name: Deploy to Vercel
     needs: build
     runs-on: ubuntu-latest
+    # Skip deploy on PRs - only deploy when merged/pushed to main
+    if: github.event_name == 'push'
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
 
-    steps:   
-        - name: Install Vercel CLI
-          run: npm i -g vercel
-        
-        - name: Deploy to Vercel
-          run: vercel deploy dist --prod --token=${{ secrets.VERCEL_TOKEN }}
-          env:
-            VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-            VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      - name: Install Vercel CLI
+        run: npm i -g vercel
+
+      - name: Deploy to Vercel
+        run: vercel deploy dist --prod --token=${{ secrets.VERCEL_TOKEN }} --yes
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
